@@ -12,6 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.bytedeco:javacv:1.5.11'
-    implementation 'org.bytedeco:ffmpeg:7.1-1.5.11:windows-x86_64'
+    implementation 'org.bytedeco:javacv:1.5.10'
+    implementation 'org.bytedeco:javacv-platform:1.5.10'
+    implementation 'org.bytedeco:openblas-platform:0.3.26-1.5.10'
 }

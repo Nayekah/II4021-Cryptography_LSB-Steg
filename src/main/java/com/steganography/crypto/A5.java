@@ -48,13 +48,13 @@ public class A5 {
                 getBit(R3, R3_CLK)
         );
 
-        if(getBit(R1, R1_CLK) == m) {
+        if (getBit(R1, R1_CLK) == m) {
             clockR1();
         }
-        if(getBit(R2, R2_CLK) == m) {
+        if (getBit(R2, R2_CLK) == m) {
             clockR2();
         }
-        if(getBit(R3, R3_CLK) == m) {
+        if (getBit(R3, R3_CLK) == m) {
             clockR3();
         }
     }
