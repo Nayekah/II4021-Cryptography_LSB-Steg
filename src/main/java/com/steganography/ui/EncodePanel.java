@@ -5,7 +5,6 @@ import javax.swing.border.*;
 import javax.swing.filechooser.*;
 import java.awt.*;
 import java.awt.geom.*;
-import java.io.File;
 
 public class EncodePanel extends JPanel {
 
@@ -35,66 +34,11 @@ public class EncodePanel extends JPanel {
         buildAll();
     }
 
-    public void setResizeCallback(Runnable cb) {
-        this.resizeCallback = cb;
-    }
+    public void setResizeCallback(Runnable cb) { this.resizeCallback = cb; }
 
     private void buildAll() {
-        int y = addTabBar(0, 0, W);
-        y += 15;
-        y = addEncodeContent(0, y, W);
+        int y = addEncodeContent(0, 0, W);
         setPreferredSize(new Dimension(W, y + 40));
-    }
-
-    private int addTabBar(int x, int y, int w) {
-        JPanel tabBar = new JPanel(null) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(GRAY_TAB);
-                g2.setStroke(new BasicStroke(1));
-                g2.drawLine(0, getHeight() - 1, getWidth(), getHeight() - 1);
-                g2.dispose();
-            }
-        };
-        tabBar.setBackground(WHITE);
-        tabBar.setBounds(x, y, w, 44);
-
-        JPanel encodeTab = new JPanel(null) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(WHITE);
-                RoundRectangle2D rr = new RoundRectangle2D.Float(0, 0, getWidth(), getHeight() + 10, 20, 20);
-                g2.fill(rr);
-                g2.setColor(GRAY_TAB);
-                g2.setStroke(new BasicStroke(1));
-                g2.draw(rr);
-                g2.setColor(WHITE);
-                g2.fillRect(0, getHeight() - 2, getWidth(), 4);
-                g2.dispose();
-            }
-        };
-        encodeTab.setOpaque(false);
-        encodeTab.setBounds(0, 0, 111, 44);
-        encodeTab.setLayout(new BorderLayout());
-        JLabel encodeLabel = new JLabel("Encode", SwingConstants.CENTER);
-        encodeLabel.setFont(new Font("Inter", Font.PLAIN, 20));
-        encodeLabel.setForeground(BLACK);
-        encodeTab.add(encodeLabel, BorderLayout.CENTER);
-        tabBar.add(encodeTab);
-
-        JLabel decodeLabel = new JLabel("Decode", SwingConstants.CENTER);
-        decodeLabel.setFont(new Font("Inter", Font.PLAIN, 20));
-        decodeLabel.setForeground(BLACK);
-        decodeLabel.setBounds(111, 0, 111, 43);
-        tabBar.add(decodeLabel);
-
-        add(tabBar);
-        return y + 44;
     }
 
     private int addEncodeContent(int x, int y, int w) {
@@ -112,11 +56,8 @@ public class EncodePanel extends JPanel {
             JFileChooser fc = new JFileChooser();
             fc.setFileFilter(new FileNameExtensionFilter("AVI Video Files (*.avi)", "avi"));
             fc.setAcceptAllFileFilterUsed(false);
-            int result = fc.showOpenDialog(EncodePanel.this);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                File f = fc.getSelectedFile();
-                coverFileLabel.setText(f.getName());
-            }
+            if (fc.showOpenDialog(EncodePanel.this) == JFileChooser.APPROVE_OPTION)
+                coverFileLabel.setText(fc.getSelectedFile().getName());
         });
 
         y += 42 + 30;
@@ -153,16 +94,10 @@ public class EncodePanel extends JPanel {
 
         chooseFileMessage.addActionListener(e -> {
             JFileChooser fc = new JFileChooser();
-            fc.setFileFilter(new FileNameExtensionFilter(
-                    "Supported Files (txt, pdf, docx, png, jpg, exe)",
-                    "txt", "pdf", "docx", "png", "jpg", "exe"
-            ));
+            fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "txt","pdf","docx","png","jpg","exe"));
             fc.setAcceptAllFileFilterUsed(true);
-            int result = fc.showOpenDialog(EncodePanel.this);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                File f = fc.getSelectedFile();
-                msgFileLabel.setText(f.getName());
-            }
+            if (fc.showOpenDialog(EncodePanel.this) == JFileChooser.APPROVE_OPTION)
+                msgFileLabel.setText(fc.getSelectedFile().getName());
         });
 
         y += 52;
@@ -215,23 +150,7 @@ public class EncodePanel extends JPanel {
 
         encodeBtnBaseY = afterRadioY + 30;
 
-        encodeBtn = new JButton("Encode") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(BLUE);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 40, 40);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        encodeBtn.setFont(new Font("Inter", Font.PLAIN, 20));
-        encodeBtn.setForeground(WHITE);
-        encodeBtn.setContentAreaFilled(false);
-        encodeBtn.setBorderPainted(false);
-        encodeBtn.setFocusPainted(false);
-        encodeBtn.setOpaque(false);
+        encodeBtn = makeActionButton("Encode");
         encodeBtn.setBounds(x, encodeBtnBaseY, w, 42);
         add(encodeBtn);
 
@@ -241,7 +160,6 @@ public class EncodePanel extends JPanel {
             encodeBtn.setBounds(x, encodeBtnBaseY, w, 42);
             updatePanelHeight(encodeBtnBaseY + 42);
         });
-
         radioRandom.addActionListener(e -> {
             stegokeyLabel.setVisible(true);
             stegokeyScroll.setVisible(true);
@@ -257,8 +175,7 @@ public class EncodePanel extends JPanel {
         int newH = contentBottom + 40;
         setPreferredSize(new Dimension(W, newH));
         if (getParent() != null) {
-            Rectangle b = getBounds();
-            setBounds(b.x, b.y, W, newH);
+            setBounds(getBounds().x, getBounds().y, W, newH);
             getParent().revalidate();
             getParent().repaint();
         }
@@ -282,11 +199,25 @@ public class EncodePanel extends JPanel {
         return label;
     }
 
-    private int addBlueButton(String text, int bw, int bh, int x, int y) {
-        JButton btn = makeBlueButtonRaw(text, bw, bh);
-        btn.setBounds(x, y, bw, bh);
-        add(btn);
-        return y + bh;
+    private JButton makeActionButton(String text) {
+        JButton btn = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(BLUE);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 40, 40);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(new Font("Inter", Font.PLAIN, 20));
+        btn.setForeground(WHITE);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        return btn;
     }
 
     private JButton makeBlueButtonRaw(String text, int bw, int bh) {
