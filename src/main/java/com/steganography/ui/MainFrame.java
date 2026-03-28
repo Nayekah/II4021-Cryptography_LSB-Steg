@@ -1,9 +1,9 @@
 package com.steganography.ui;
 
 import javax.swing.*;
-import javax.swing.border.AbstractBorder;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
+import java.io.File;
 
 public class MainFrame extends JFrame {
 
@@ -16,10 +16,13 @@ public class MainFrame extends JFrame {
     private JPanel cardPanel;
     private EncodePanel encodePanel;
     private DecodePanel decodePanel;
+    private EncodeResultPanel encodeResultPanel;
+    private DecodeResultPanel decodeResultPanel;
     private boolean encodeActive = true;
 
     private JPanel encodeTab;
     private JPanel decodeTab;
+    private JPanel content;
 
     public MainFrame() {
         setTitle("LSB Encoder & Decoder");
@@ -47,14 +50,18 @@ public class MainFrame extends JFrame {
 
         encodePanel = new EncodePanel();
         decodePanel = new DecodePanel();
+        encodeResultPanel = new EncodeResultPanel();
+        decodeResultPanel = new DecodeResultPanel();
 
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
         cardPanel.setBackground(WHITE);
         cardPanel.add(encodePanel, "encode");
         cardPanel.add(decodePanel, "decode");
+        cardPanel.add(encodeResultPanel, "encodeResult");
+        cardPanel.add(decodeResultPanel, "decodeResult");
 
-        JPanel content = new JPanel(null) {
+        content = new JPanel(null) {
             @Override
             public Dimension getPreferredSize() {
                 Component visible = getVisibleCard();
@@ -89,10 +96,52 @@ public class MainFrame extends JFrame {
         cardPanel.setBounds(x, y, w, encodePanel.getPreferredSize().height);
         content.add(cardPanel);
 
-        encodePanel.setResizeCallback(() -> updateCardSize(content));
-        decodePanel.setResizeCallback(() -> updateCardSize(content));
+        encodePanel.setResizeCallback(() -> updateCardSize());
+        decodePanel.setResizeCallback(() -> updateCardSize());
+        encodeResultPanel.setResizeCallback(() -> updateCardSize());
+        decodeResultPanel.setResizeCallback(() -> updateCardSize());
+
+        encodePanel.setOnEncode(() -> showEncodeResult(null));
+        decodePanel.setOnDecode(() -> {
+            if (decodePanel.isResultText()) {
+                showDecodeResult("", null);
+            } else {
+                showDecodeResult(null, new java.io.File("output"));
+            }
+        });
 
         return content;
+    }
+
+    public void showDecodeResult(String message, File file) {
+        if (file != null) decodeResultPanel.showFile(file);
+        else decodeResultPanel.showMessage(message != null ? message : "");
+
+        boolean[] encodeActiveArr = (boolean[]) encodeTab.getClientProperty("active");
+        boolean[] decodeActiveArr = (boolean[]) decodeTab.getClientProperty("active");
+        encodeActiveArr[0] = false;
+        decodeActiveArr[0] = true;
+        encodeTab.repaint();
+        decodeTab.repaint();
+        encodeActive = false;
+
+        cardLayout.show(cardPanel, "decodeResult");
+        updateCardSize();
+    }
+
+    public void showEncodeResult(File stegoFile) {
+        encodeResultPanel.setStegoVideoFile(stegoFile);
+
+        boolean[] encodeActiveArr = (boolean[]) encodeTab.getClientProperty("active");
+        boolean[] decodeActiveArr = (boolean[]) decodeTab.getClientProperty("active");
+        encodeActiveArr[0] = true;
+        decodeActiveArr[0] = false;
+        encodeTab.repaint();
+        decodeTab.repaint();
+        encodeActive = true;
+
+        cardLayout.show(cardPanel, "encodeResult");
+        updateCardSize();
     }
 
     private JPanel buildTabBar(int w) {
@@ -117,6 +166,7 @@ public class MainFrame extends JFrame {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (!encodeActive) switchTo("encode");
+                else switchTo("encode");
             }
         });
         tabBar.add(encodeTab);
@@ -171,7 +221,7 @@ public class MainFrame extends JFrame {
     }
 
     private void switchTo(String card) {
-        encodeActive = card.equals("encode");
+        encodeActive = card.equals("encode") || card.equals("encodeResult");
 
         boolean[] encodeActiveArr = (boolean[]) encodeTab.getClientProperty("active");
         boolean[] decodeActiveArr = (boolean[]) decodeTab.getClientProperty("active");
@@ -182,10 +232,10 @@ public class MainFrame extends JFrame {
         decodeTab.repaint();
 
         cardLayout.show(cardPanel, card);
-        updateCardSize((JPanel) cardPanel.getParent());
+        updateCardSize();
     }
 
-    private void updateCardSize(JPanel content) {
+    private void updateCardSize() {
         Component visible = getVisibleCard();
         if (visible == null) return;
         int newH = visible.getPreferredSize().height;
@@ -201,10 +251,6 @@ public class MainFrame extends JFrame {
             if (c.isVisible()) return c;
         }
         return null;
-    }
-
-    private Font loadInterFont(int style, int size) {
-        return new Font("Inter", style, size);
     }
 
     public static void main(String[] args) {

@@ -27,6 +27,7 @@ public class EncodePanel extends JPanel {
 
     private int encodeBtnBaseY;
     private final int W = 860;
+    private Runnable onEncode;
 
     public EncodePanel() {
         setLayout(null);
@@ -35,6 +36,7 @@ public class EncodePanel extends JPanel {
     }
 
     public void setResizeCallback(Runnable cb) { this.resizeCallback = cb; }
+    public void setOnEncode(Runnable cb) { this.onEncode = cb; }
 
     private void buildAll() {
         int y = addEncodeContent(0, 0, W);
@@ -151,6 +153,7 @@ public class EncodePanel extends JPanel {
         encodeBtnBaseY = afterRadioY + 30;
 
         encodeBtn = makeActionButton("Encode");
+        encodeBtn.addActionListener(e -> { if (onEncode != null) onEncode.run(); });
         encodeBtn.setBounds(x, encodeBtnBaseY, w, 42);
         add(encodeBtn);
 
