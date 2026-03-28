@@ -200,7 +200,7 @@ public class ExtractView extends VBox {
     private void selectStegoVideo() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select Stego Video");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("AVI Video", "*.avi"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Video Files", "*.avi", "*.mp4"));
         File file = chooser.showOpenDialog(stage);
         
         if (file != null) {

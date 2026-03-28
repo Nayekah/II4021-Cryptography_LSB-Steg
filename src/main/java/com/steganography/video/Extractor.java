@@ -13,6 +13,7 @@ import com.steganography.crypto.SHA256;
 import com.steganography.utils.common.Scheme;
 import com.steganography.utils.decoder.HeaderInfo;
 import com.steganography.utils.decoder.SequentialCollector;
+import com.steganography.video.mp4.Mp4Extractor;
 
 public class Extractor {
     // welp same as embedder for the explanation
@@ -23,6 +24,10 @@ public class Extractor {
     private static final int MAX_FILENAME = 4096;
 
     public ExtractResult extract(File input, String stegoKey, String encKey) throws Exception {
+        if (VideoContainer.fromFile(input) == VideoContainer.MP4) {
+            return new Mp4Extractor().extract(input, stegoKey, encKey);
+        }
+
         Reader reader = new Reader(input);
         if (stegoKey == null || stegoKey.isBlank()) {
             return extractSequential(reader, encKey);

@@ -15,6 +15,7 @@ import com.steganography.utils.common.Metrics;
 import com.steganography.utils.encoder.PixelEncoder;
 import com.steganography.utils.encoder.RandomEmbedSession;
 import com.steganography.utils.encoder.SequentialEmbedSession;
+import com.steganography.video.mp4.Mp4Embedder;
 
 // please refer to utils/encoder/*EmbedSession.java for detail :3
 public class Embedder {
@@ -35,6 +36,10 @@ public class Embedder {
     }
 
     public EmbedResult embedText(File input, File output, String text, String stegoKey, String encKey, Scheme scheme) throws Exception {
+        if (VideoContainer.fromFile(output) == VideoContainer.MP4) {
+            return new Mp4Embedder().embedText(input, output, text, stegoKey, encKey);
+        }
+
         Reader reader = new Reader(input);
         reader.readMetadata();
         if (stegoKey == null || stegoKey.isBlank()) {
@@ -49,6 +54,10 @@ public class Embedder {
     }
 
     public EmbedResult embedFile(File input, File output, File secretFile, String stegoKey, String encKey, Scheme scheme) throws Exception {
+        if (VideoContainer.fromFile(output) == VideoContainer.MP4) {
+            return new Mp4Embedder().embedFile(input, output, secretFile, stegoKey, encKey);
+        }
+
         byte[] fileData = Files.readAllBytes(secretFile.toPath());
         Reader reader = new Reader(input);
         reader.readMetadata();

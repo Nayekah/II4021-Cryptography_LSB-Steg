@@ -11,6 +11,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.bytedeco.javacv.FFmpegLogCallback;
 
 public class MainApp extends Application {
     private static final double WINDOW_WIDTH = 1100;
@@ -18,7 +19,8 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        primaryStage.setTitle("StegVI");
+        FFmpegLogCallback.set();
+        primaryStage.setTitle("StegVi");
 
         StackPane root = new StackPane();
         root.getStyleClass().add("main-container");

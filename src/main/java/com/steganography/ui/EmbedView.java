@@ -22,6 +22,8 @@ import com.steganography.utils.common.Scheme;
 import com.steganography.video.EmbedResult;
 import com.steganography.video.Embedder;
 import com.steganography.video.Reader;
+import com.steganography.video.VideoContainer;
+import com.steganography.video.mp4.Mp4Embedder;
 
 public class EmbedView extends VBox {
     private final Stage stage;
@@ -45,6 +47,8 @@ public class EmbedView extends VBox {
     private final ToggleGroup modeGroup;
     private final TextField stegoKeyField;
     private final HBox stegoKeyBox;
+    private final ComboBox<VideoContainer> outputFormatBox;
+    private final Label schemeTitle;
     private final ComboBox<Scheme> lsbSchemeBox;
     private final TextField outputNameField;
 
@@ -94,6 +98,14 @@ public class EmbedView extends VBox {
         formColumn.setMinHeight(0);
 
         // Cover Video
+        Label formatTitle = new Label(">> Video Format");
+        formatTitle.getStyleClass().add("section-title");
+
+        outputFormatBox = new ComboBox<>();
+        outputFormatBox.getItems().addAll(VideoContainer.values());
+        outputFormatBox.getSelectionModel().select(VideoContainer.AVI);
+        outputFormatBox.setMaxWidth(Double.MAX_VALUE);
+
         Label coverTitle = new Label(">> Cover Video");
         coverTitle.getStyleClass().add("section-title");
 
@@ -211,7 +223,7 @@ public class EmbedView extends VBox {
             stegoKeyBox.setManaged(isRandom);
         });
 
-        Label schemeTitle = new Label(">> LSB Scheme");
+        schemeTitle = new Label(">> LSB Scheme");
         schemeTitle.getStyleClass().add("section-title");
 
         lsbSchemeBox = new ComboBox<>();
@@ -230,6 +242,15 @@ public class EmbedView extends VBox {
         HBox outRow = new HBox(10, outLabel, outputNameField);
         outRow.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(outputNameField, Priority.ALWAYS);
+
+        outputFormatBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (coverVideoFile != null && VideoContainer.fromFile(coverVideoFile) != getOutputFormat()) {
+                clearCoverVideo();
+            }
+            updateEmbeddingOptions();
+            updateOutputPrompt();
+            refreshCapacityLabel();
+        });
 
         // Embed Button
         Button embedBtn = new Button("Embed Message");
@@ -294,7 +315,8 @@ public class EmbedView extends VBox {
         VBox.setVgrow(outputScroll, Priority.ALWAYS);
 
         // Add form children
-        formColumn.getChildren().addAll(coverTitle, coverRow, capacityLabel,
+        formColumn.getChildren().addAll(formatTitle, outputFormatBox, new Separator(),
+                coverTitle, coverRow, capacityLabel,
                 new Separator(), msgTitle, msgTypeRow, textInputBox,
                 fileInputBox, new Separator(), encTitle, encryptCheckBox,
                 encKeyBox, new Separator(), modeTitle, modeRow, stegoKeyBox,
@@ -307,6 +329,7 @@ public class EmbedView extends VBox {
 
         updateCoverVideoState();
         updateSecretFileState();
+        updateEmbeddingOptions();
         appendPrompt();
     }
 
@@ -334,31 +357,18 @@ public class EmbedView extends VBox {
     private void selectCoverVideo() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select Cover Video");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("AVI Video", "*.avi"));
+        if (getOutputFormat() == VideoContainer.MP4) {
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("MP4 Video", "*.mp4"));
+        } else {
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("AVI Video", "*.avi"));
+        }
         File file = chooser.showOpenDialog(stage);
 
         if (file != null) {
             coverVideoFile = file;
             coverVideoLabel.setText(file.getName());
             updateCoverVideoState();
-
-            Task<String> capTask = new Task<>() {
-                @Override
-                protected String call() throws Exception {
-                    Reader reader = new Reader(file);
-                    reader.readMetadata();
-                    long capBytes = (long) reader.getWidth() * reader.getHeight() * reader.getTotalFrames();
-                    String codec = reader.getVideoCodecName() != null ? reader.getVideoCodecName() : "unknown";
-                    return String.format(
-                            "Capacity: %,d bytes (%.2f KB) | %d frames | %dx%d @ %.1f fps | codec=%s",
-                            capBytes, capBytes / 1024.0,
-                            reader.getTotalFrames(), reader.getWidth(),
-                            reader.getHeight(), reader.getFrameRate(), codec);
-                }
-            };
-            capTask.setOnSucceeded(e -> capacityLabel.setText(capTask.getValue()));
-            capTask.setOnFailed(e -> capacityLabel.setText("Error reading video"));
-            new Thread(capTask).start();
+            refreshCapacityLabel();
         }
     }
 
@@ -387,7 +397,7 @@ public class EmbedView extends VBox {
         coverVideoFile = null;
         coverVideoLabel.setText("No file selected");
         capacityLabel.setText("");
-        outputNameField.setPromptText("output_stego.avi");
+        updateOutputPrompt();
         updateCoverVideoState();
     }
 
@@ -413,8 +423,52 @@ public class EmbedView extends VBox {
         secretDiscardButton.setManaged(hasFile);
     }
 
+    private void updateEmbeddingOptions() {
+        boolean isMp4 = getOutputFormat() == VideoContainer.MP4;
+        schemeTitle.setText(isMp4 ? ">> MP4 Algorithm" : ">> LSB Scheme");
+        lsbSchemeBox.setVisible(!isMp4);
+        lsbSchemeBox.setManaged(!isMp4);
+    }
+
+    private void updateOutputPrompt() {
+        outputNameField.setPromptText("output_stego." + getOutputFormat().getExtension());
+    }
+
+    private void refreshCapacityLabel() {
+        if (coverVideoFile == null) {
+            capacityLabel.setText("");
+            return;
+        }
+
+        Task<String> capTask = new Task<>() {
+            @Override
+            protected String call() throws Exception {
+                Reader reader = new Reader(coverVideoFile);
+                reader.readMetadata();
+                String codec = reader.getVideoCodecName() != null ? reader.getVideoCodecName() : "unknown";
+                long capBytes;
+
+                if (getOutputFormat() == VideoContainer.MP4) {
+                    capBytes = Mp4Embedder.calculateCapacityBytes(coverVideoFile);
+                    return String.format("Capacity: %,d bytes (%.2f KB) | container mode | %d frames | %dx%d @ %.1f fps | codec=%s",
+                            capBytes, capBytes / 1024.0, reader.getTotalFrames(), reader.getWidth(),
+                            reader.getHeight(), reader.getFrameRate(), codec);
+                }
+
+                capBytes = Embedder.calculateCapacityBits(reader.getWidth(), reader.getHeight(), reader.getTotalFrames()) / 8L;
+                return String.format("Capacity: %,d bytes (%.2f KB) | %d frames | %dx%d @ %.1f fps | codec=%s",
+                        capBytes, capBytes / 1024.0, reader.getTotalFrames(), reader.getWidth(),
+                        reader.getHeight(), reader.getFrameRate(), codec);
+            }
+        };
+        capTask.setOnSucceeded(e -> capacityLabel.setText(capTask.getValue()));
+        capTask.setOnFailed(e -> capacityLabel.setText("Error reading video"));
+        new Thread(capTask).start();
+    }
+
     private boolean isTextMode() {return msgTypeGroup.getToggles().get(0).isSelected();}
     private boolean isRandomMode() {return modeGroup.getToggles().get(1).isSelected();}
+    private VideoContainer getOutputFormat() {return outputFormatBox.getValue() == null ? VideoContainer.AVI : outputFormatBox.getValue();}
 
     private void doEmbed() {
         if (coverVideoFile == null || !coverVideoFile.exists()) {
@@ -437,13 +491,13 @@ public class EmbedView extends VBox {
             showError("Please enter a stego-key.");
             return;
         }
-
         String outputName = outputNameField.getText();
+        String extension = "." + getOutputFormat().getExtension();
         if (outputName == null || outputName.isEmpty()) {
-            outputName = "output_stego.avi";
+            outputName = "output_stego" + extension;
         }
-        if (!outputName.toLowerCase().endsWith(".avi")) {
-            outputName += ".avi";
+        if (!outputName.toLowerCase().endsWith(extension)) {
+            outputName += extension;
         }
 
         final String finalOutputName = outputName;
